@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-V8Q0Bpbo/O9//UbMojtLCQjbBWp8piIp02AWS0GPRwg='; style-src 'sha256-6lXtoWL4Ws5O/Y8bo66prgtyCidLt+Al59yBS/lgxHE='; base-uri 'none'; form-action 'none'; img-src 'none'; connect-src 'none'">
+<title>D2 Codex sign-in</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f8f9fa; --ink: #1b2027; --muted: #5d6673; --accent: #9a6d12; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #11151b; --ink: #e4e8ee; --muted: #97a1ae; --accent: #e0b64a; } }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--ink);
+         font: 16px/1.5 "Segoe UI", system-ui, sans-serif; padding: 16px; box-sizing: border-box; }
+  main { max-width: 32rem; }
+  h1 { font-size: 1.4rem; margin: 0 0 8px; }
+  p { color: var(--muted); margin: 0 0 10px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Finishing sign-in…</h1>
+  <p id="msg">Handing your Bungie sign-in back to D2 Codex.</p>
+</main>
+<script>
+  // Bungie redirects here (HTTPS is required). This page only forwards the one-time code to the D2 Codex app
+  // listening on this PC (127.0.0.1). The app chose the port and put it in `state` ("<random>.<port>").
+  // Nothing is stored or sent anywhere else.
+  (function () {
+    var q = new URLSearchParams(location.search);
+    var title = document.getElementById("title"), msg = document.getElementById("msg");
+    function fail(t, m) { title.textContent = t; msg.textContent = m; }
+    if (q.get("error")) return fail("Sign-in was cancelled", "Bungie said: " + q.get("error") + ". You can close this tab and try again from D2 Codex.");
+    var code = q.get("code"), state = q.get("state") || "";
+    var m = /^[A-Za-z0-9_-]{16,128}\.(\d{4,5})$/.exec(state);
+    if (!code || !m) return fail("Nothing to hand over", "This page is only used while signing in to D2 Codex. You can close this tab.");
+    var port = parseInt(m[1], 10);
+    if (port < 49152 || port > 65535) return fail("Unexpected sign-in request", "The request did not come from D2 Codex. You can close this tab.");
+    history.replaceState(null, "", location.pathname);  // keep the code out of the browser history
+    location.replace("http://127.0.0.1:" + port + "/callback?code=" + encodeURIComponent(code) + "&state=" + encodeURIComponent(state));
+  })();
+</script>
+</body>
+</html>
